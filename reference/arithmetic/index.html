@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Arithmetic - FIFTH | An x86 FORTH</title>
+        <link href="../../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap-3.0.3.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+            <div class="container">
+
+                <!-- Collapsed navigation -->
+                <div class="navbar-header">
+                    <!-- Expander button -->
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="../..">FIFTH | An x86 FORTH</a>
+                </div>
+
+                <!-- Expanded navigation -->
+                <div class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li >
+                                <a href="../..">Home</a>
+                            </li>
+                            <li >
+                                <a href="../../about/">About</a>
+                            </li>
+                            <li >
+                                <a href="../../license/">License</a>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Reference <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li >
+    <a href="../stack/">Stack Manipulation</a>
+</li>
+                                    
+<li class="active">
+    <a href="./">Arithmetic</a>
+</li>
+                                    
+<li >
+    <a href="../notation/">Notation</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav navbar-right">
+                        <li>
+                            <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li >
+                                <a rel="next" href="../stack/">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li >
+                                <a rel="prev" href="../notation/">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+        <li class="main active"><a href="#notation">Notation</a></li>
+        <li class="main "><a href="#single-precision-arithmetic">Single-Precision Arithmetic</a></li>
+        <li class="main "><a href="#bitwise-arithmetic">Bitwise Arithmetic</a></li>
+        <li class="main "><a href="#numeric-comparison">Numeric Comparison</a></li>
+        <li class="main "><a href="#floating-arithmetic">Floating Arithmetic</a></li>
+        <li class="main "><a href="#todo">TODO</a></li>
+    </ul>
+</div></div>
+                <div class="col-md-9" role="main">
+
+<h3 id="notation">Notation</h3>
+<ul>
+<li>n - signed integer</li>
+<li>u - unsigned integer</li>
+<li>x - arbitrary cell</li>
+</ul>
+<h3 id="single-precision-arithmetic">Single-Precision Arithmetic</h3>
+<p>These operations act on signed integers</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Data Stack Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- n</td>
+</tr>
+<tr>
+<td>1+</td>
+<td>n<sup>1</sup> -- n<sup>2</sup></td>
+</tr>
+<tr>
+<td>UNDER+</td>
+<td>n<sup>1</sup> x n<sup>2</sup> -- n x</td>
+</tr>
+<tr>
+<td>-</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- n</td>
+</tr>
+<tr>
+<td>1-</td>
+<td>n -- n</td>
+</tr>
+<tr>
+<td>*</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- n</td>
+</tr>
+<tr>
+<td>/</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- n</td>
+</tr>
+<tr>
+<td>MOD</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- n</td>
+</tr>
+<tr>
+<td>/MOD</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- n<sup>3</sup> n<sup>4</sup></td>
+</tr>
+<tr>
+<td>NEGATE</td>
+<td>n -- n</td>
+</tr>
+<tr>
+<td>ABS</td>
+<td>n -- u</td>
+</tr>
+<tr>
+<td>MIN</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- n</td>
+</tr>
+<tr>
+<td>MAX</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- n</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bitwise-arithmetic">Bitwise Arithmetic</h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Data Stack Change</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AND</td>
+<td>x<sup>1</sup> x<sup>2</sup> -- x</td>
+<td></td>
+</tr>
+<tr>
+<td>OR</td>
+<td>x<sup>1</sup> x<sup>2</sup> -- x</td>
+<td></td>
+</tr>
+<tr>
+<td>XOR</td>
+<td>x<sup>1</sup> x<sup>2</sup> -- x</td>
+<td></td>
+</tr>
+<tr>
+<td>INVERT</td>
+<td>x<sup>1</sup> -- x<sup>2</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>LSHIFT</td>
+<td>u<sup>1</sup> n -- u<sup>2</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>RSHIFT</td>
+<td>u<sup>1</sup> n -- u<sup>2</sup></td>
+<td>Logical right shift</td>
+</tr>
+<tr>
+<td>2*</td>
+<td>x<sup>1</sup> -- x<sup>2</sup></td>
+<td>Shift left by 1</td>
+</tr>
+<tr>
+<td>2/</td>
+<td>x<sup>1</sup> -- x<sup>2</sup></td>
+<td>Arithmetic shift right by 1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="numeric-comparison">Numeric Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Data Stack Change</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&lt;</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>&lt;=</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>&lt;</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>&lt;=</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>&lt;&gt;</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>=</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>&gt;</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>&gt;=</td>
+<td>n<sup>1</sup> n<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>0&lt;</td>
+<td>n -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>0&lt;=</td>
+<td>n -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>0&lt;&gt;</td>
+<td>n -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>0=</td>
+<td>n -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>0&gt;</td>
+<td>n -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>0&gt;=</td>
+<td>n -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>u&lt;</td>
+<td>u<sup>1</sup> u<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>u&lt;=</td>
+<td>u<sup>1</sup> u<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>u&gt;</td>
+<td>u<sup>1</sup> u<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>u&gt;=</td>
+<td>u<sup>1</sup> u<sup>2</sup> -- f</td>
+<td></td>
+</tr>
+<tr>
+<td>within</td>
+<td>u<sup>1</sup> u<sup>2</sup> u<sup>3</sup> -- f</td>
+<td>u<sup>1</sup> ∈ [u<sup>2</sup>,u<sup>3</sup>) or, if u<sup>3</sup> ≤ u<sup>2</sup>, u<sup>1</sup> ∉ [u<sup>3</sup>, u<sup>2</sup>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="floating-arithmetic">Floating Arithmetic</h3>
+<h1 id="todo">TODO</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Data Stack Change</th>
+<th>Floating Stack Change</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F+</td>
+<td>--</td>
+<td>r<sup>1</sup> r<sup>2</sup> -- r<sup>3</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>F-</td>
+<td>--</td>
+<td>r<sup>1</sup> r<sup>2</sup> -- r<sup>3</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>F*</td>
+<td>--</td>
+<td>r<sup>1</sup> r<sup>2</sup> -- r<sup>3</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>F/</td>
+<td>--</td>
+<td>r<sup>1</sup> r<sup>2</sup> -- r<sup>3</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>FNEGATE</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>FABS</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>FMAX</td>
+<td>--</td>
+<td>r<sup>1</sup> r<sup>2</sup> -- r<sup>3</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>FMIN</td>
+<td>--</td>
+<td>r<sup>1</sup> r<sup>2</sup> -- r<sup>3</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>FLOOR</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>Rounds towards -∞</td>
+</tr>
+<tr>
+<td>FROUND</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>Rounds to nearest integral</td>
+</tr>
+<tr>
+<td>F**</td>
+<td>--</td>
+<td>r<sup>1</sup> r<sup>2</sup> -- r<sup>3</sup></td>
+<td>raise r<sup>1</sup> to the r<sup>2</sup>th power</td>
+</tr>
+<tr>
+<td>FSQRT</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>FEXP</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td></td>
+</tr>
+<tr>
+<td>FEXPM1</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>r<sup>2</sup> = e<sup>r<sup>1</sup></sup>-1</td>
+</tr>
+<tr>
+<td>FLN</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>log<sub>e</sub>(r<sup>1</sup>)</td>
+</tr>
+<tr>
+<td>FLNP1</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>r<sup>2</sup> = log<sub>e</sub>(r<sup>1</sup> + 1)</td>
+</tr>
+<tr>
+<td>FLOG</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>r<sup>2</sup> = log<sub>10</sub>(r<sup>1</sup>)</td>
+</tr>
+<tr>
+<td>FALOG</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>r<sup>2</sup> = 10<sup>r<sup>1</sup></sup></td>
+</tr>
+<tr>
+<td>F2*</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>r<sup>2</sup> = r<sup>1</sup> * 2.0</td>
+</tr>
+<tr>
+<td>F2/</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>r<sup>2</sup> = r<sup>1</sup> * 0.5</td>
+</tr>
+<tr>
+<td>1/F</td>
+<td>--</td>
+<td>r<sup>1</sup> -- r<sup>2</sup></td>
+<td>r<sup>2</sup> = 1.0 / r<sup>1</sup></td>
+</tr>
+<tr>
+<td>PRECISION</td>
+<td>-- u</td>
+<td>--</td>
+<td>The number of significant digits used by F. FE. FS.</td>
+</tr>
+</tbody>
+</table></div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="exampleModalLabel">Search</h4>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form role="form">
+                    <div class="form-group">
+                        <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="Keyboard Shortcuts Modal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="exampleModalLabel">Keyboard Shortcuts</h4>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
