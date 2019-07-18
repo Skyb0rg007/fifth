@@ -1,16 +1,39 @@
 NASM = nasm
 NASMFLAGS = -felf64 -g
-CC = gcc
-LDFLAGS = -nostartfiles -nostdlib
+LD = ld
+LDFLAGS =
 LDLIBS =
 
-BUILDDIR = _build
+BUILDDIR  = _build
+SOURCEDIR = src
+MKDOCS    = mkdocs  # Ensure at least 1.0.4 (from pip, not ex. dnf)
 
-fifth: $(BUILDDIR)/fifth.o
-	$(CC) $(LDFLAGS) $(LDLIBS) $^ -o $@
+.DEFAULT: all
+.PHONY: run clean docs docs-serve
 
-$(BUILDDIR)/fifth.o: fifth.nasm macros.nasm | $(BUILDDIR)
-	$(NASM) $(NASMFLAGS) $< -o $@
+all: fifth
+
+run: $(BUILDDIR)/fifth
+	$(BUILDDIR)/fifth
+
+clean:
+	$(RM) $(BUILDDIR)/*.o $(BUILDDIR)/fifth
+
+docs:
+	$(MKDOCS) build
+
+docs-serve:
+	$(MKDOCS) serve
+
+fifth: $(BUILDDIR)/fifth
+
+#############################################################################
+
+$(BUILDDIR)/fifth: $(BUILDDIR)/fifth.o
+	$(LD) $(LDFLAGS) $(LDLIBS) $^ -o $@
+
+$(BUILDDIR)/fifth.o: $(SOURCEDIR)/fifth.nasm | $(BUILDDIR)
+	$(NASM) $(NASMFLAGS) -i ./$(SOURCEDIR)/ $< -o $@
 
 $(BUILDDIR):
 	mkdir -p $@

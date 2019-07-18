@@ -1,5 +1,14 @@
 ;; vim: ft=nasm
 
+;; Definitions for syscalls
+%define STDIN_FILENO  0
+%define STDOUT_FILENO 1
+%define STDERR_FILENO 2
+
+%define __NR_read       0
+%define __NR_write      1
+%define __NR_exit_group 231
+
 ;; The FORTH inner-interpreter
 %macro NEXT 0
         lodsq ; mov rax, [rsi] ; add rsi, 8
@@ -7,12 +16,12 @@
 %endmacro
 
 ;; Return stack macros
-%macro PUSHRSP 1
+%macro RSP_PUSH 1
         lea rbp, [rbp - 8] ; sub rbp, 8
         mov [rbp], %1
 %endmacro
 
-%macro POPRSP 1
+%macro RSP_POP 1
         mov %1, [rbp]
         lea rbp, [rbp + 8] ; add rbp, 8
 %endmacro
@@ -69,7 +78,7 @@ name_%+%2:
 
 	align 8
 %2:
-	dq DOCOLON ; The codeword (interpreter)
+	dq DO_COLON ; The codeword (interpreter)
 	; Write FORTH words after this, ending with 'EXIT'
 %endmacro
 
@@ -79,9 +88,9 @@ defcode %1, %2, %4
 	NEXT
 %endmacro
 
-%macro defvar 2-4  0, 0 ; name, label, initial=0, flags=0
+%macro defvar 2-4  0 ; name, label, initial=0
 ; The function simply pushes the variable's address
-defcode %1, %2, %4
+defcode %1, %2, 0
 	push var_%+%2
 	NEXT
 

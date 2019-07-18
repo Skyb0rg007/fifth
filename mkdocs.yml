@@ -1,0 +1,10 @@
+site_name: FIFTH | An x86 FORTH
+nav:
+  - Home: index.md
+  - About: about.md
+  - License: license.md
+  - Reference:
+    - Stack Manipulation: reference/stack.md
+    - Arithmetic: reference/arithmetic.md
+    - Notation: reference/notation.md
+

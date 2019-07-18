@@ -475,3 +475,8 @@ emit_scratch:
 ;;
 ;;
 ;;
+
+
+        ;; NUMBER
+        defcode "NUMBER", FORTH_NUMBER
+
