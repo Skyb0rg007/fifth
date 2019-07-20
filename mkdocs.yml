@@ -4,7 +4,9 @@ nav:
   - About: about.md
   - License: license.md
   - Reference:
+    - reference.md
     - Stack Manipulation: reference/stack.md
     - Arithmetic: reference/arithmetic.md
     - Notation: reference/notation.md
-
+markdown_extensions:
+  - superscript

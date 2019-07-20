@@ -1,51 +1,51 @@
 
 ### Primitive Data Stack Operations
 
-| Name | Data Stack Change                                                                      | Notes                             |
-| ---  | ---                                                                                    | ---                               |
-| DUP  | x -- x x                                                                               |                                   |
-| DROP | x --                                                                                   |                                   |
-| SWAP | x<sup>1</sup> x<sup>2</sup> -- x<sup>2</sup> x<sup>1</sup>                             |                                   |
-| OVER | x<sup>1</sup> x<sup>2</sup> -- x<sup>1</sup> x<sup>2</sup> x<sup>1</sup>               |                                   |
-| ROT  | x<sup>1</sup> x<sup>2</sup> x<sup>3</sup> -- x<sup>2</sup> x<sup>3</sup> x<sup>1</sup> |                                   |
-| -ROT | x<sup>1</sup> x<sup>2</sup> x<sup>3</sup> -- x<sup>3</sup> x<sup>1</sup> x<sup>2</sup> |                                   |
-| NIP  | x<sup>1</sup> x<sup>2</sup> -- x<sup>2</sup>                                           |                                   |
-| TUCK | x<sup>1</sup> x<sup>2</sup> -- x<sup>2</sup> x<sup>1</sup> x<sup>2</sup>               |                                   |
-| ?DUP | x -- x x \| 0                                                                          | Only duplicates x if x is nonzero |
+| Name | Data Stack Change                | Notes |
+| ---  | ---                              | ---   |
+| DUP  | x -- x x                         |       |
+| DROP | x --                             |       |
+| SWAP | x^1^ x^2^ -- x^2^ x^1^           |       |
+| OVER | x^1^ x^2^ -- x^1^ x^2^ x^1^      |       |
+| ROT  | x^1^ x^2^ x^3^ -- x^2^ x^3^ x^1^ |       |
+| -ROT | x^1^ x^2^ x^3^ -- x^3^ x^1^ x^2^ |       |
+| NIP  | x^1^ x^2^ -- x^2^                |       |
+| TUCK | x^1^ x^2^ -- x^2^ x^1^ x^2^      |       |
+| ?DUP | x -- x x \| 0                    | Only duplicates x if x is nonzero |
 
 ### Double Data Stack Operations
 
-| Name  | Data Stack Change                                                                                                                                                          |
-| ---   | ---                                                                                                                                                                        |
-| 2DUP  | x<sup>1</sup> x<sup>2</sup> -- x<sup>1</sup> x<sup>2</sup> x<sup>1</sup> x<sup>2</sup>                                                                                     |
-| 2DROP | x<sup>1</sup> x<sup>2</sup> --                                                                                                                                             |
-| 2SWAP | x<sup>1</sup> x<sup>2</sup> x<sup>3</sup> x<sup>4</sup> -- x<sup>3</sup> x<sup>4</sup> x<sup>1</sup> x<sup>2</sup>                                                         |
-| 2OVER | x<sup>1</sup> x<sup>2</sup> x<sup>3</sup> x<sup>4</sup> -- x<sup>1</sup> x<sup>2</sup> x<sup>3</sup> x<sup>4</sup> x<sup>1</sup> x<sup>2</sup>                             |
-| 2ROT  | x<sup>1</sup> x<sup>2</sup> x<sup>3</sup> x<sup>4</sup> x<sup>5</sup> x<sup>6</sup> -- x<sup>3</sup> x<sup>4</sup> x<sup>5</sup> x<sup>6</sup> x<sup>1</sup> x<sup>2</sup> |
-| 2NIP  | x<sup>1</sup> x<sup>2</sup> x<sup>3</sup> x<sup>4</sup> -- x<sup>3</sup> x<sup>4</sup>                                                                                     |
-| 2TUCK | x<sup>1</sup> x<sup>2</sup> x<sup>3</sup> x<sup>4</sup> -- x<sup>3</sup> x<sup>4</sup> x<sup>1</sup> x<sup>2</sup> x<sup>3</sup> x<sup>4</sup>                             |
+| Name  | Data Stack Change                                              |
+| ---   | ---                                                            |
+| 2DUP  | x^1^ x^2^ -- x^1^ x^2^ x^1^ x^2^                               |
+| 2DROP | x^1^ x^2^ --                                                   |
+| 2SWAP | x^1^ x^2^ x^3^ x^4^ -- x^3^ x^4^ x^1^ x^2^                     |
+| 2OVER | x^1^ x^2^ x^3^ x^4^ -- x^1^ x^2^ x^3^ x^4^ x^1^ x^2^           |
+| 2ROT  | x^1^ x^2^ x^3^ x^4^ x^5^ x^6^ -- x^3^ x^4^ x^5^ x^6^ x^1^ x^2^ |
+| 2NIP  | x^1^ x^2^ x^3^ x^4^ -- x^3^ x^4^                               |
+| 2TUCK | x^1^ x^2^ x^3^ x^4^ -- x^3^ x^4^ x^1^ x^2^ x^3^ x^4^           |
 
 ### Return Stack Operations
 
-| Name   | Data Stack Change              | Return Stack Change                                        |
-| ---    | ---                            | ---                                                        |
-| >R     | x --                           | -- x                                                       |
-| R>     | -- x                           | x --                                                       |
-| R@     | -- x                           | x -- x                                                     |
-| RDROP  | --                             | x --                                                       |
-| 2>R    | x<sup>1</sup> x<sup>2</sup> -- | -- x<sup>1</sup> x<sup>2</sup>                             |
-| 2R>    | -- x<sup>1</sup> x<sup>2</sup> | x<sup>1</sup> x<sup>2</sup> --                             |
-| 2R@    | -- x<sup>1</sup> x<sup>2</sup> | x<sup>1</sup> x<sup>2</sup> -- x<sup>1</sup> x<sup>2</sup> |
-| 2RDROP | --                             | x<sup>1</sup> x<sup>2</sup> --                             |
+| Name   | Data Stack Change | Return Stack Change    |
+| ---    | ---               | ---                    |
+| >R     | x --              | -- x                   |
+| R>     | -- x              | x --                   |
+| R@     | -- x              | x -- x                 |
+| RDROP  | --                | x --                   |
+| 2>R    | x^1^ x^2^ --      | -- x^1^ x^2^           |
+| 2R>    | -- x^1^ x^2^      | x^1^ x^2^ --           |
+| 2R@    | -- x^1^ x^2^      | x^1^ x^2^ -- x^1^ x^2^ |
+| 2RDROP | --                | x^1^ x^2^ --           |
 
-### Floating Stack Operations
+<!-- ### Floating Stack Operations
 
-| Name  | Floating Stack Change                                                                  |
-| ---   | ---                                                                                    |
-| FDROP | r --                                                                                   |
-| FNIP  | r<sup>1</sup> r<sup>2</sup> -- r<sup>2</sup>                                           |
-| FDUP  | r -- r r                                                                               |
-| FOVER | r<sup>1</sup> r<sup>2</sup> -- r<sup>1</sup> r<sup>2</sup> r<sup>1</sup>               |
-| FTUCK | r<sup>1</sup> r<sup>2</sup> -- r<sup>2</sup> r<sup>1</sup> r<sup>2</sup>               |
-| FSWAP | r<sup>1</sup> r<sup>2</sup> -- r<sup>2</sup> r<sup>1</sup>                             |
-| FROT  | r<sup>1</sup> r<sup>2</sup> r<sup>3</sup> -- r<sup>2</sup> r<sup>3</sup> r<sup>1</sup> |
+| Name  | Floating Stack Change            |
+| ---   | ---                              |
+| FDROP | r --                             |
+| FNIP  | r^1^ r^2^ -- r^2^                |
+| FDUP  | r -- r r                         |
+| FOVER | r^1^ r^2^ -- r^1^ r^2^ r^1^      |
+| FTUCK | r^1^ r^2^ -- r^2^ r^1^ r^2^      |
+| FSWAP | r^1^ r^2^ -- r^2^ r^1^           |
+| FROT  | r^1^ r^2^ r^3^ -- r^2^ r^3^ r^1^ | -->
