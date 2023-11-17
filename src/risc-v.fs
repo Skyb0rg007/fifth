@@ -2,27 +2,41 @@
 
 VOCABULARY RISC-V
 
-: (code)
-    ALSO RISC-V
-    GET-ORDER >R = ABORT" Assembler is activated!"
+: (code) ( -- )
+    ALSO RISC-V \ Add RISC-V to search order
+    \ Assert that RISC-V wasn't at the top of the search order already
+    GET-ORDER >R = ABORT" Assembler is activated!" ( -- widⁿ, … wid² R: -- n )
     R> 2 - 0 ?DO DROP LOOP ;
 
-: (end-code)
+: (end-code) ( -- )
     ALSO RISC-V
-    GET-ORDER >R <> ABORT" Assembler isn't activated!"
+    \ Assert that RISC-V was on the top of the search order
+    GET-ORDER >R <> ABORT" Assembler isn't activated!" ( -- widⁿ, … wid² R: -- n )
     R> 2 - 0 ?DO DROP LOOP
+    \ Remove RISC-V from the search order
     PREVIOUS PREVIOUS ;
 
-S" a.out" W/O BIN CREATE-FILE THROW CONSTANT outfile
+VARIABLE outfile  0 outfile !
+
+: OPEN-OUTFILE ( c-addr u -- )
+    outfile @ ?DUP IF
+        CLOSE-FILE THROW
+    THEN
+    W/O BIN CREATE-FILE THROW
+    outfile ! ;
+
+: CLOSE-OUTFILE ( -- )
+    outfile @ CLOSE-FILE THROW
+    0 outfile ! ;
+
+TRUE CONSTANT HEX-REGISTER-NAMES
 
 RISC-V DEFINITIONS
 
-\ 1000 ALLOT
-\ 
-\ : t, ( x -- ) there 
-
 VARIABLE tmp
-: t, ( x -- ) tmp ! tmp 4 CHARS outfile WRITE-FILE THROW ;
+: t, ( x -- )
+    tmp !
+    tmp 4 CHARS outfile @ WRITE-FILE THROW ;
 
 \ Registers
 %00000 CONSTANT x0
@@ -84,7 +98,7 @@ x24 CONSTANT s8
 x25 CONSTANT s9
 x26 CONSTANT s10
 x27 CONSTANT s11
-1 [IF]
+HEX-REGISTER-NAMES [IF]
 x10 CONSTANT a0   \ Function arguments/return values
 x11 CONSTANT a1
 x12 CONSTANT a2   \ Function arguments
@@ -135,8 +149,8 @@ x17 CONSTANT a7
 : S-type ( imm rs2 rs1 funct3 op -- )
     $7f AND
     SWAP $07 AND 12 LSHIFT OR
-    SWAP $1f AND 15 LSHIFT OR
     SWAP $1f AND 20 LSHIFT OR
+    SWAP $1f AND 15 LSHIFT OR
     SWAP $fff AND
         DUP $1f AND 7 LSHIFT
         SWAP 5 RSHIFT 25 LSHIFT OR
@@ -159,7 +173,7 @@ x17 CONSTANT a7
 : U-type ( imm rd op -- )
     $7f AND
     SWAP $1f AND 7 LSHIFT OR
-    SWAP $fffff000 AND OR
+    SWAP $fffff AND 12 LSHIFT OR
     t, ;
 
 : J-type ( imm rd op -- instr )
@@ -200,11 +214,11 @@ x17 CONSTANT a7
 : sub   ( rs2 rs1 rd -- ) >R %0100000 -ROT %000 R> OP:OP R-type ;
 : slt   ( rs2 rs1 rd -- ) >R %0000000 -ROT %010 R> OP:OP R-type ;
 : sltu  ( rs2 rs1 rd -- ) >R %0000000 -ROT %011 R> OP:OP R-type ;
-\ : xor   ( rs2 rs1 rd -- ) >R %0000000 -ROT %100 R> OP:OP R-type ;
+: op:xor   ( rs2 rs1 rd -- ) >R %0000000 -ROT %100 R> OP:OP R-type ;
 : srl   ( rs2 rs1 rd -- ) >R %0000000 -ROT %101 R> OP:OP R-type ;
 : sra   ( rs2 rs1 rd -- ) >R %0100000 -ROT %101 R> OP:OP R-type ;
-\ : or    ( rs2 rs1 rd -- ) >R %0000000 -ROT %110 R> OP:OP R-type ;
-\ : and   ( rs2 rs1 rd -- ) >R %0000000 -ROT %111 R> OP:OP R-type ;
+: op:or    ( rs2 rs1 rd -- ) >R %0000000 -ROT %110 R> OP:OP R-type ;
+: op:and   ( rs2 rs1 rd -- ) >R %0000000 -ROT %111 R> OP:OP R-type ;
 : fence ( pred succ -- ) $f AND SWAP $f AND 4 LSHIFT OR 0 0 0 OP:MISC-MEM I-type ;
 : fence.i ( -- ) 0 0 fence ;
 : ecall ( -- ) 0 0 0 0 OP:SYSTEM I-type ;
@@ -224,10 +238,10 @@ x17 CONSTANT a7
 : rem    ( rs2 rs1 rd -- ) >R %0000001 -ROT %110 R> OP:OP R-type ;
 : remu   ( rs2 rs1 rd -- ) >R %0000001 -ROT %111 R> OP:OP R-type ;
 
-\ pseudo-instructions
-: la ( rd symbol -- ) 2DUP auipc DUP addi ;
+\ Pseudoinstructions
+: la ( rd symbol -- ) 2DUP auipc DUP addi ; \ auipc rd, symbol[32:12]; addi rd, rd, symbol[11:0]
 : nop 0 x0 x0 addi ;
-\ li 
+\ li : TODO
 : mv ( rs rd -- x ) 0 -ROT addi ;      \ mv rd, rs == addi rd, rs, 0
 : not ( rs rd -- x ) $fff -ROT xori ;  \ not rd, rs == xori rd, rs, -1
 : neg ( rs rd -- x ) x0 SWAP sub ;     \ neg rd, rs == sub rd, x0, rs
@@ -235,29 +249,63 @@ x17 CONSTANT a7
 : snez ( rs rd -- x ) x0 SWAP sltu ;   \ snez rd, rs == sltu rd, x0, rs
 : sltz ( rs rd -- x ) x0 -ROT slt ;    \ sltz rd, rs == slt rd, rs, x0
 : sgtz ( rs rd -- x ) x0 SWAP slt ;    \ sgtz rd, rs == slt rd, x0, rs
+\ : fmv.s ( rs rd -- x ) OVER SWAP fsgnj.s ;
+\ : beqz ( imm rs -- x ) beq ;
+
+: xor op:xor ;
+: or op:or ;
+: and op:and ;
 
 FORTH ALSO DEFINITIONS
 
 : compile-gcc" ( "asm" -- )
     S" temp.s" W/O BIN CREATE-FILE THROW >R
-    ['] S\" EXECUTE R@ WRITE-FILE THROW
+    [ ' S\" COMPILE, ] R@ WRITE-FILE THROW
     S\" \n" R@ WRITE-FILE THROW
     R> CLOSE-FILE THROW
-    S" riscv64-linux-gnu-gcc-10 -c temp.s -o temp.elf" system
-    S" riscv64-linux-gnu-objcopy -O binary temp.elf test.out" system
-    \ S" temp.s" DELETE-FILE THROW
-    \ S" temp.elf" DELETE-FILE THROW
-    ;
 
-compile-gcc" addi a0, a0, 40\nsb a0, 323(a1)"
+    S" riscv64-linux-gnu-gcc-10 -c temp.s -o temp.elf" SYSTEM
+    S" riscv64-linux-gnu-objcopy -O binary temp.elf test.out" SYSTEM
+    S" temp.s"   DELETE-FILE THROW
+    S" temp.elf" DELETE-FILE THROW ;
 
-(code)
-40 a0 a0 addi .S
-323 a1 a0 sb .S
-(end-code)
+: compare-gcc ( -- )
+    S" diff -q a.out test.out" SYSTEM
+    $? IF
+        ." Files differ!"
+        S" riscv64-linux-gnu-objdump -b binary -m riscv -D a.out"    SYSTEM
+        S" riscv64-linux-gnu-objdump -b binary -m riscv -D test.out" SYSTEM
+    ELSE
+        ." Test case passed." CR
+    THEN ;
 
-outfile CLOSE-FILE THROW
+: begin-testcase ( -- )
+    S" a.out" OPEN-OUTFILE
+    (code) ;
 
+: end-testcase" ( -- )
+    (end-code)
+    CLOSE-OUTFILE
+    compile-gcc"
+    compare-gcc ;
+
+begin-testcase
+    40 a0 a1 addi
+    323 a1 a0 sb
+end-testcase" addi a1, a0, 40\nsb a0, 323(a1)"
+
+begin-testcase
+    a0 a1 a2 xor
+end-testcase" xor a2, a1, a0"
+
+begin-testcase
+    40 x1 lui
+    51 x2 auipc
+end-testcase" lui x1, 40\nauipc x2, 51"
+
+begin-testcase
+    \ empty
+end-testcase" "
 
 \ : accessor: ( offset nbits "name" -- )
 \     CREATE
