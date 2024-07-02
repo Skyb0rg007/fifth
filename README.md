@@ -2,6 +2,27 @@
 
 Jonesforth-based FORTH interpreter for x86_64 Linux
 
+# Rewrite
+
+Currently being rewritten for the
+
+# Rewrite
+- Board
+  * Seeed Studio XIAO ESP32C3
+  * [Datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf)
+- ISA
+  * [Spec](https://riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf)
+  * RV32IMC
+  * 32-bit RISC-V
+  * I - Base integer ISA
+  * M - Standard Extension for Integer Multiplication and Division
+    + MUL, MULH[[S]U]
+    + DIV[U], REM[U]
+  * C - Standard Extension for Compressed Instructions
+- FORTH implementation details
+  * "State-smart" words - recognizers
+  * Checked control words
+  * Wordlists
 
 ## Goals
 

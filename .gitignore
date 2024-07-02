@@ -1,2 +1,8 @@
 /_build
 /site
+/.envrc
+/.direnv
+/result
+*.bin
+test.s
+*.elf

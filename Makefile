@@ -4,30 +4,62 @@
 # LDFLAGS =
 # LDLIBS =
 
+PREFIX  = /usr/local
+DESTDIR =
+
 BUILDDIR  = _build
 SOURCEDIR = src
 MKDOCS    = mkdocs
-# Also be sure to have MarkdownSuperscript installed
+GFORTH    = gforth
+
+# RISC-V stuff
 
 .DEFAULT: all
-.PHONY: run clean docs docs-serve
+.PHONY: clean install
 
 all: fifth
 
-run: $(BUILDDIR)/fifth
-	@$(BUILDDIR)/fifth
+fifth: $(BUILDDIR)/fifth $(BUILDDIR)/.fifth
 
 clean:
-	$(RM) -r $(BUILDDIR) ./site
-	$(RM) fifth
+	$(RM) $(BUILDDIR)/fifth
+	$(RM) -d $(BUILDDIR)
 
-docs:
-	$(MKDOCS) build
+install: $(BUILDDIR)/fifth
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(BUILDDIR)/fifth $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(BUILDDIR)/.fifth $(DESTDIR)$(PREFIX)/bin
 
-docs-serve:
-	$(MKDOCS) serve
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)
 
-fifth: $(BUILDDIR)/fifth
+$(BUILDDIR)/fifth $(BUILDDIR)/.fifth: src/trivial.fs | $(BUILDDIR)
+	$(GFORTH) $< $@
+	$(CC) -Wall -Wextra -std=c99 src/hello.c -o $(BUILDDIR)/.fifth
+
+# Also be sure to have MarkdownSuperscript installed
+# RV32_QEMU = qemu-system-riscv32
+# RV32_RUN = riscv32-unknown-elf-run
+# RV32_OBJDUMP = riscv32-unknown-elf-objdump
+# RV32_GCC = riscv32-unknown-elf-gcc-13.2.0
+
+
+# all: fifth
+
+# run: $(BUILDDIR)/fifth
+# 	@$(BUILDDIR)/fifth
+
+# clean:
+# 	$(RM) -r $(BUILDDIR) ./site
+# 	$(RM) fifth
+
+# docs:
+# 	$(MKDOCS) build
+
+# docs-serve:
+# 	$(MKDOCS) serve
+
+# fifth: $(BUILDDIR)/fifth
 
 #############################################################################
 

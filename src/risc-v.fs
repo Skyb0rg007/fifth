@@ -1,403 +1,207 @@
 \ RISC-V Assembler DSL
 
-VOCABULARY RISC-V
-
-: (code) ( -- )
-    ALSO RISC-V \ Add RISC-V to search order
-    \ Assert that RISC-V wasn't at the top of the search order already
-    GET-ORDER >R = ABORT" Assembler is activated!" ( -- widⁿ, … wid² R: -- n )
-    R> 2 - 0 ?DO DROP LOOP ;
-
-: (end-code) ( -- )
-    ALSO RISC-V
-    \ Assert that RISC-V was on the top of the search order
-    GET-ORDER >R <> ABORT" Assembler isn't activated!" ( -- widⁿ, … wid² R: -- n )
-    R> 2 - 0 ?DO DROP LOOP
-    \ Remove RISC-V from the search order
-    PREVIOUS PREVIOUS ;
-
-VARIABLE outfile  0 outfile !
-
-: OPEN-OUTFILE ( c-addr u -- )
-    outfile @ ?DUP IF
-        CLOSE-FILE THROW
-    THEN
-    W/O BIN CREATE-FILE THROW
-    outfile ! ;
-
-: CLOSE-OUTFILE ( -- )
-    outfile @ CLOSE-FILE THROW
-    0 outfile ! ;
-
-TRUE CONSTANT HEX-REGISTER-NAMES
-
-RISC-V DEFINITIONS
-
-VARIABLE tmp
-: t, ( x -- )
-    tmp !
-    tmp 4 CHARS outfile @ WRITE-FILE THROW ;
-
-\ Registers
-%00000 CONSTANT x0
-%00001 CONSTANT x1
-%00010 CONSTANT x2
-%00011 CONSTANT x3
-%00100 CONSTANT x4
-%00101 CONSTANT x5
-%00110 CONSTANT x6
-%00111 CONSTANT x7
-%01000 CONSTANT x8
-%01001 CONSTANT x9
-%01010 CONSTANT x10
-%01011 CONSTANT x11
-%01100 CONSTANT x12
-%01101 CONSTANT x13
-%01110 CONSTANT x14
-%01111 CONSTANT x15
-%10000 CONSTANT x16
-%10001 CONSTANT x17
-%10010 CONSTANT x18
-%10011 CONSTANT x19
-%10100 CONSTANT x20
-%10101 CONSTANT x21
-%10110 CONSTANT x22
-%10111 CONSTANT x23
-%11000 CONSTANT x24
-%11001 CONSTANT x25
-%11010 CONSTANT x26
-%11011 CONSTANT x27
-%11100 CONSTANT x28
-%11101 CONSTANT x29
-%11110 CONSTANT x30
-%11111 CONSTANT x31
-
-\ Register ABI names
-x0  CONSTANT zero \ Hard-wired zero
-x1  CONSTANT ra   \ Return address
-x2  CONSTANT sp   \ Stack pointer
-x3  CONSTANT gp   \ Global pointer
-x4  CONSTANT tp   \ Thread pointer
-x5  CONSTANT t0   \ Temporary/alternate link register
-x6  CONSTANT t1   \ Temporaries
-x7  CONSTANT t2
-x28 CONSTANT t3
-x29 CONSTANT t4
-x30 CONSTANT t5
-x31 CONSTANT t6
-x8  CONSTANT fp   \ Frame pointer
-x8  CONSTANT s0   \ Saved registers
-x9  CONSTANT s1
-x18 CONSTANT s2
-x19 CONSTANT s3
-x20 CONSTANT s4
-x21 CONSTANT s5
-x22 CONSTANT s6
-x23 CONSTANT s7
-x24 CONSTANT s8
-x25 CONSTANT s9
-x26 CONSTANT s10
-x27 CONSTANT s11
-HEX-REGISTER-NAMES [IF]
-x10 CONSTANT a0   \ Function arguments/return values
-x11 CONSTANT a1
-x12 CONSTANT a2   \ Function arguments
-x13 CONSTANT a3
-x14 CONSTANT a4
-x15 CONSTANT a5
-x16 CONSTANT a6
-x17 CONSTANT a7
+\ 32-bit addressing
+' HERE ALIAS THERE
+CELL 4 = [IF]
+' CELL  ALIAS TCELL
+' CELLS ALIAS TCELLS
+' @     ALIAS T@
+' !     ALIAS T!
+' ,     ALIAS T,
+' C@    ALIAS TC@
+' C!    ALIAS TC!
+' C,    ALIAS TC,
+[ELSE]
+4 CONSTANT TCELL
+: TCELLS 2 LSHIFT ;
+: T@ @ $ffffffff AND ;
+: T! DUP @ $ffffffff INVERT AND ROT $ffffffff AND OR SWAP ! ;
+: T, HERE T! TCELL ALLOT ;
+' C@ ALIAS TC@
+' C! ALIAS TC!
+' C, ALIAS TC,
 [THEN]
 
-: reg>string ( reg -- c-addr u )
-    S>D <# [CHAR] x HOLD #s #> ;
+\ Assembler
+: check-range ( u -- )
+    WITHIN 0= ABORT" argument out of range" ;
 
-: reg. ( reg -- )
-    reg>string TYPE ;
+\ Opcode
+: asm-op ( n -- code )
+    DUP 0 $80 check-range ;
 
-\ Base opcodes
-%0000011 CONSTANT OP:LOAD
-%0100011 CONSTANT OP:STORE
-%1100011 CONSTANT OP:BRANCH
-%1100111 CONSTANT OP:JALR
-%0001111 CONSTANT OP:MISC-MEM
-%1101111 CONSTANT OP:JAL
-%0010011 CONSTANT OP:OP-IMM
-%0110011 CONSTANT OP:OP
-%1110011 CONSTANT OP:SYSTEM
-%0010111 CONSTANT OP:AUIPC
-%0110111 CONSTANT OP:LUI
+\ Destination register
+: asm-rd ( u code -- code )
+    OVER 0 $20 check-range
+    SWAP 7 LSHIFT OR ;
 
-\ Base instruction set
-: R-type ( funct7 rs2 rs1 funct3 rd op -- )
-    $7f AND
-    SWAP $1f AND  7 LSHIFT OR
-    SWAP $07 AND 12 LSHIFT OR
-    SWAP $1f AND 15 LSHIFT OR
-    SWAP $1f AND 20 LSHIFT OR
-    SWAP $7f AND 25 LSHIFT OR
-    t, ;
+\ First source register
+: asm-rs1 ( u code -- code )
+    OVER 0 $20 check-range
+    SWAP 15 LSHIFT OR ;
 
-: I-type ( imm rs1 funct3 rd op -- )
-    $7f AND
-    SWAP $1f AND  7 LSHIFT OR
-    SWAP $07 AND 12 LSHIFT OR
-    SWAP $1f AND 15 LSHIFT OR
-    SWAP $fff AND 20 LSHIFT OR
-    t, ;
+\ Second source register
+: asm-rs2 ( u code -- code )
+    OVER 0 $20 check-range
+    SWAP 20 LSHIFT OR ;
 
-: S-type ( imm rs2 rs1 funct3 op -- )
-    $7f AND
-    SWAP $07 AND 12 LSHIFT OR
-    SWAP $1f AND 20 LSHIFT OR
-    SWAP $1f AND 15 LSHIFT OR
-    SWAP $fff AND
-        DUP $1f AND 7 LSHIFT
-        SWAP 5 RSHIFT 25 LSHIFT OR
-        OR
-    t, ;
+\ 3-bit functionality slot
+: asm-funct3 ( u code -- code )
+    OVER 0 $8 check-range
+    SWAP 12 LSHIFT OR ;
 
-: B-type ( imm rs2 rs1 funct3 op -- )
-    $7f AND
-    SWAP $07 AND 12 LSHIFT OR
-    SWAP $1f AND 15 LSHIFT OR
-    SWAP $1f AND 20 LSHIFT OR
-    SWAP 1 RSHIFT $fff AND
-        DUP $200 AND 3 RSHIFT OR
-        OVER $f AND 8 LSHIFT
-        OVER $400 AND 21 LSHIFT OR
-        SWAP $1f0 AND 20 LSHIFT OR
-        OR
-    t, ;
+\ 7-bit functionality slot
+: asm-funct7 ( u code -- code )
+    OVER 0 $80 check-range
+    SWAP 25 LSHIFT OR ;
 
-: U-type ( imm rd op -- )
-    $7f AND
-    SWAP $1f AND 7 LSHIFT OR
-    SWAP $fffff AND 12 LSHIFT OR
-    t, ;
+\ I-type immediate
+: asm-I-imm ( u code -- code )
+    OVER 0 $1000 check-range
+    SWAP 20 LSHIFT OR ;
 
-: J-type ( imm rd op -- instr )
-    $7f AND
-    SWAP $1f AND 7 LSHIFT OR
-    TRUE ABORT" NYI"
-    t, ;
+\ U-type immediate
+: asm-U-imm ( u code -- code )
+    OVER 0 $100000 check-range
+    SWAP 12 LSHIFT OR ;
 
-\ Base Instructions
-: lui   ( imm rd -- ) OP:LUI U-type ;
-: auipc ( imm rd -- ) OP:AUIPC U-type ;
-: jal   ( imm rd -- ) OP:JAL J-type ;
-: jalr  ( imm rd -- ) OP:JALR J-type ;
-: beq   ( imm rs2 rs1 -- ) %000 OP:BRANCH B-type ;
-: bne   ( imm rs2 rs1 -- ) %001 OP:BRANCH B-type ;
-: blt   ( imm rs2 rs1 -- ) %100 OP:BRANCH B-type ;
-: bge   ( imm rs2 rs1 -- ) %101 OP:BRANCH B-type ;
-: bltu  ( imm rs2 rs1 -- ) %110 OP:BRANCH B-type ;
-: bgeu  ( imm rs2 rs1 -- ) %111 OP:BRANCH B-type ;
-: lb    ( imm rs rd -- ) %000 SWAP OP:LOAD I-type ;
-: lh    ( imm rs rd -- ) %001 SWAP OP:LOAD I-type ;
-: lw    ( imm rs rd -- ) %010 SWAP OP:LOAD I-type ;
-: lbu   ( imm rs rd -- ) %100 SWAP OP:LOAD I-type ;
-: lhu   ( imm rs rd -- ) %101 SWAP OP:LOAD I-type ;
-: sb    ( imm rs2 rs1 -- ) %000 OP:STORE S-type ;
-: sh    ( imm rs2 rs1 -- ) %001 OP:STORE S-type ;
-: sw    ( imm rs2 rs1 -- ) %010 OP:STORE S-type ;
-: addi  ( imm rs rd -- ) %000 SWAP OP:OP-IMM I-type ;
-: slti  ( imm rs rd -- ) %010 SWAP OP:OP-IMM I-type ;
-: sltiu ( imm rs rd -- ) %011 SWAP OP:OP-IMM I-type ;
-: xori  ( imm rs rd -- ) %100 SWAP OP:OP-IMM I-type ;
-: ori   ( imm rs rd -- ) %110 SWAP OP:OP-IMM I-type ;
-: andi  ( imm rs rd -- ) %111 SWAP OP:OP-IMM I-type ;
-: slli  ( shamt rs1 rd -- ) ROT $1f AND -ROT %001 SWAP OP:OP-IMM I-type ;
-: srli  ( shamt rs1 rd -- ) ROT $1f AND -ROT %101 SWAP OP:OP-IMM I-type ;
-: srai  ( shamt rs1 rd -- ) ROT $1f AND %0100000 OR -ROT %101 SWAP OP:OP-IMM I-type ;
-: add   ( rs2 rs1 rd -- ) >R %0000000 -ROT %000 R> OP:OP R-type ;
-: sub   ( rs2 rs1 rd -- ) >R %0100000 -ROT %000 R> OP:OP R-type ;
-: slt   ( rs2 rs1 rd -- ) >R %0000000 -ROT %010 R> OP:OP R-type ;
-: sltu  ( rs2 rs1 rd -- ) >R %0000000 -ROT %011 R> OP:OP R-type ;
-: op:xor   ( rs2 rs1 rd -- ) >R %0000000 -ROT %100 R> OP:OP R-type ;
-: srl   ( rs2 rs1 rd -- ) >R %0000000 -ROT %101 R> OP:OP R-type ;
-: sra   ( rs2 rs1 rd -- ) >R %0100000 -ROT %101 R> OP:OP R-type ;
-: op:or    ( rs2 rs1 rd -- ) >R %0000000 -ROT %110 R> OP:OP R-type ;
-: op:and   ( rs2 rs1 rd -- ) >R %0000000 -ROT %111 R> OP:OP R-type ;
-: fence ( pred succ -- ) $f AND SWAP $f AND 4 LSHIFT OR 0 0 0 OP:MISC-MEM I-type ;
-: fence.i ( -- ) 0 0 fence ;
-: ecall ( -- ) 0 0 0 0 OP:SYSTEM I-type ;
-: ebreak ( -- ) 1 0 0 0 OP:SYSTEM I-type ;
-: csrrw ( csr rs1 rd -- ) %001 SWAP OP:SYSTEM I-type ;
-: csrrs ( csr rs1 rd -- ) %010 SWAP OP:SYSTEM I-type ;
-: csrrc ( csr rs1 rd -- ) %011 SWAP OP:SYSTEM I-type ;
-: csrrwi ( csr zimm rd -- ) %101 SWAP OP:SYSTEM I-type ;
-: csrrsi ( csr zimm rd -- ) %110 SWAP OP:SYSTEM I-type ;
-: csrrci ( csr zimm rd -- ) %111 SWAP OP:SYSTEM I-type ;
-: mul    ( rs2 rs1 rd -- ) >R %0000001 -ROT %000 R> OP:OP R-type ;
-: mulh   ( rs2 rs1 rd -- ) >R %0000001 -ROT %001 R> OP:OP R-type ;
-: mulhsu ( rs2 rs1 rd -- ) >R %0000001 -ROT %010 R> OP:OP R-type ;
-: mulhu  ( rs2 rs1 rd -- ) >R %0000001 -ROT %011 R> OP:OP R-type ;
-: div    ( rs2 rs1 rd -- ) >R %0000001 -ROT %100 R> OP:OP R-type ;
-: divu   ( rs2 rs1 rd -- ) >R %0000001 -ROT %101 R> OP:OP R-type ;
-: rem    ( rs2 rs1 rd -- ) >R %0000001 -ROT %110 R> OP:OP R-type ;
-: remu   ( rs2 rs1 rd -- ) >R %0000001 -ROT %111 R> OP:OP R-type ;
+\ S-type immediate
+: asm-S-imm ( u code -- code )
+    OVER -$800 $800 check-range
+    OVER $1f AND 7 LSHIFT OR
+    SWAP 5 RSHIFT $7f AND 25 LSHIFT OR ;
+
+\ B-type immediate
+: asm-B-imm ( u code -- code )
+    -1 ABORT" Not yet implemented" ;
+
+\ | funct7 | rs2 | rs1 | funct3 | rd | opcode |
+: asm-R-type ( "name" opcode funct3 funct7 )
+    CREATE ROT , , ,
+    DOES> ( rd rs1 rs2 -- )
+        DUP CELL+ 2@ ROT @
+        asm-op asm-funct7 asm-funct3 asm-rs2 asm-rs1 asm-rd T, ;
+
+\ | imm[11:0] | rs1 | funct3 | rd | opcode |
+: asm-I-type ( "name" opcode funct3 -- )
+    CREATE SWAP 2,
+    DOES> ( rd imm rs -- )
+        2@ asm-op asm-funct3 asm-rs1 asm-I-imm asm-rd T, ;
+
+\ | imm[11:5] | rs2 | rs1 | funct3 | imm[4:0] | opcode |
+: asm-S-type ( "name" opcode funct3 -- )
+    CREATE SWAP 2,
+    DOES> ( src base offset -- )
+        2@ asm-op asm-funct3 asm-S-imm asm-rs1 asm-rs2 T, ;
+
+\ | imm[12|10:5] | rs2 | rs1 | funct3 | imm[4:1|11] | opcode |
+: asm-B-type ( "name" opcode funct3 -- )
+    CREATE SWAP 2,
+    DOES> ( src1 src2 offset -- )
+        2@ asm-op asm-funct3 asm-B-imm asm-rs1 asm-rs2 T, ;
+
+\ | imm[31:12] | opcode |
+: asm-U-type ( "name" opcode -- )
+    CREATE ,
+    DOES> ( rd imm -- )
+        @ asm-op asm-U-imm asm-rd T, ;
+
+\ Registers
+$00 CONSTANT x0  $01 CONSTANT x1  $02 CONSTANT x2  $03 CONSTANT x3
+$04 CONSTANT x4  $05 CONSTANT x5  $06 CONSTANT x6  $07 CONSTANT x7
+$08 CONSTANT x8  $09 CONSTANT x9  $0a CONSTANT x10 $0b CONSTANT x11
+$0c CONSTANT x12 $0d CONSTANT x13 $0e CONSTANT x14 $0f CONSTANT x15
+$10 CONSTANT x16 $11 CONSTANT x17 $12 CONSTANT x18 $13 CONSTANT x19
+$14 CONSTANT x20 $15 CONSTANT x21 $16 CONSTANT x22 $17 CONSTANT x23
+$18 CONSTANT x24 $19 CONSTANT x25 $1a CONSTANT x26 $1b CONSTANT x27
+$1c CONSTANT x28 $1d CONSTANT x29 $1e CONSTANT x30 $1f CONSTANT x31
+
+\ Register Aliases
+\ x0 CONSTANT a0
+
+\ Integer Register-Immediate Instructions
+%0010011 %000 asm-I-type addi, ( dest src imm -- )
+%0010011 %010 asm-I-type slti,
+%0010011 %011 asm-I-type sltiu,
+%0010011 %100 asm-I-type xori,
+%0010011 %110 asm-I-type ori,
+%0010011 %111 asm-I-type andi,
+%0010011 %001 %0000000 asm-R-type slli, ( dest src shift -- )
+%0010011 %101 %0000000 asm-R-type srli,
+%0010011 %101 %0100000 asm-R-type srai,
+%0110111 asm-U-type lui,   ( dest imm -- )
+%0010111 asm-U-type auipc, ( dest imm -- )
+
+\ Integer Register-register Instructions
+%0110011 %000 %0000000 asm-R-type add, ( dest src1 src2 -- )
+%0110011 %000 %0100000 asm-R-type sub,
+%0110011 %001 %0000000 asm-R-type sll,
+%0110011 %010 %0000000 asm-R-type slt,
+%0110011 %011 %0000000 asm-R-type sltu,
+%0110011 %100 %0000000 asm-R-type xor,
+%0110011 %101 %0000000 asm-R-type srl,
+%0110011 %101 %0100000 asm-R-type sra,
+%0110011 %110 %0100000 asm-R-type or,
+%0110011 %111 %0100000 asm-R-type and,
+
+\ Unconditional Jumps
+: jal, ( dest offset -- )
+    DUP 1 AND ABORT" jal offset must be 2-byte aligned"
+    DUP -$80000 $80000 check-range
+    %1101111 asm-op
+    OVER 20 LSHIFT $7fe00000 AND OR
+    OVER 10 LSHIFT $100000 AND OR
+    OVER 19 RSHIFT $1 AND 31 RSHIFT OR
+    SWAP 1 LSHIFT $1ff000 AND OR
+    asm-rd T, ;
+%1100111 %000 asm-I-type jalr, ( dest base offset -- )
+\ jalr x1, 8(x2) -> x1 x2 8 jalr,
+
+\ Conditional Branches
+%1100011 %000 asm-B-type beq,  ( src1 src2 offset -- )
+%1100011 %001 asm-B-type bne,
+%1100011 %100 asm-B-type blt,
+%1100011 %101 asm-B-type bge,
+%1100011 %110 asm-B-type bltu,
+%1100011 %111 asm-B-type bgeu,
+
+\ Load and Store Instructions
+%0000011 %000 asm-I-type lb, \ lb x1, 8(x2) -> x1 x2 8 lb,
+%0000011 %001 asm-I-type lh,
+%0000011 %010 asm-I-type lw,
+%0000011 %100 asm-I-type lbu,
+%0000011 %101 asm-I-type lhu,
+%0100011 %000 asm-S-type sb, \ sb x1, 8(x2) -> x1 x2 8 sb,
+%0100011 %001 asm-S-type sh,
+%0100011 %010 asm-S-type sw,
 
 \ Pseudoinstructions
-: la ( rd symbol -- ) 2DUP auipc DUP addi ; \ auipc rd, symbol[32:12]; addi rd, rd, symbol[11:0]
-: nop 0 x0 x0 addi ;
-\ li : TODO
-: mv ( rs rd -- x ) 0 -ROT addi ;      \ mv rd, rs == addi rd, rs, 0
-: not ( rs rd -- x ) $fff -ROT xori ;  \ not rd, rs == xori rd, rs, -1
-: neg ( rs rd -- x ) x0 SWAP sub ;     \ neg rd, rs == sub rd, x0, rs
-: seqz ( rs rd -- x ) 1 -ROT sltiu ;   \ seqz rd, rs == sltiu rd, rs, 0
-: snez ( rs rd -- x ) x0 SWAP sltu ;   \ snez rd, rs == sltu rd, x0, rs
-: sltz ( rs rd -- x ) x0 -ROT slt ;    \ sltz rd, rs == slt rd, rs, x0
-: sgtz ( rs rd -- x ) x0 SWAP slt ;    \ sgtz rd, rs == slt rd, x0, rs
-\ : fmv.s ( rs rd -- x ) OVER SWAP fsgnj.s ;
-\ : beqz ( imm rs -- x ) beq ;
+: nop, x0 x0 0 addi, ;
 
-: xor op:xor ;
-: or op:or ;
-: and op:and ;
+VARIABLE start
+VARIABLE fileid
 
-FORTH ALSO DEFINITIONS
+: start-output ( c-addr u -- )
+    W/O BIN CREATE-FILE THROW fileid !
+    THERE start ! ;
 
-: compile-gcc" ( "asm" -- )
-    S" temp.s" W/O BIN CREATE-FILE THROW >R
-    [ ' S\" COMPILE, ] R@ WRITE-FILE THROW
-    S\" \n" R@ WRITE-FILE THROW
-    R> CLOSE-FILE THROW
+: end-output ( config -- )
+    start @ THERE OVER - fileid @ WRITE-FILE THROW
+    fileid @ CLOSE-FILE THROW
+    0 fileid ! 0 start ! ;
 
-    S" riscv64-linux-gnu-gcc-10 -c temp.s -o temp.elf" SYSTEM
-    S" riscv64-linux-gnu-objcopy -O binary temp.elf test.out" SYSTEM
-    S" temp.s"   DELETE-FILE THROW
-    S" temp.elf" DELETE-FILE THROW ;
+S" out.bin" start-output
+x8 $deae jal,
+end-output
 
-: compare-gcc ( -- )
-    S" diff -q a.out test.out" SYSTEM
-    $? IF
-        ." Files differ!"
-        S" riscv64-linux-gnu-objdump -b binary -m riscv -D a.out"    SYSTEM
-        S" riscv64-linux-gnu-objdump -b binary -m riscv -D test.out" SYSTEM
-    ELSE
-        ." Test case passed." CR
-    THEN ;
+S" test.s" W/O BIN CREATE-FILE THROW CONSTANT testfile
+S\" jal x8, 0xd\n" testfile WRITE-FILE THROW
+testfile CLOSE-FILE THROW
 
-: begin-testcase ( -- )
-    S" a.out" OPEN-OUTFILE
-    (code) ;
+S" riscv32-unknown-elf-gcc test.s -c -o test.elf" SYSTEM
+S" riscv32-unknown-elf-objcopy -O binary test.elf test.bin" SYSTEM
 
-: end-testcase" ( -- )
-    (end-code)
-    CLOSE-OUTFILE
-    compile-gcc"
-    compare-gcc ;
-
-begin-testcase
-    40 a0 a1 addi
-    323 a1 a0 sb
-end-testcase" addi a1, a0, 40\nsb a0, 323(a1)"
-
-begin-testcase
-    a0 a1 a2 xor
-end-testcase" xor a2, a1, a0"
-
-begin-testcase
-    40 x1 lui
-    51 x2 auipc
-end-testcase" lui x1, 40\nauipc x2, 51"
-
-begin-testcase
-    \ empty
-end-testcase" "
-
-\ : accessor: ( offset nbits "name" -- )
-\     CREATE
-\         1 SWAP LSHIFT 1- SWAP ( -- mask offset ) , ,
-\     DOES> ( x a-addr -- x )
-\         \ ." accessing mask = " DUP CELL+ @ BASE @ >R HEX . R> BASE ! ." , offset = " DUP @ . CR
-\         TUCK @ RSHIFT SWAP CELL+ @ AND
-\     ;
-\ 
-\ 25  7 accessor: funct7
-\ 20  5 accessor: rs2
-\ 15  5 accessor: rs1
-\ 12  3 accessor: funct3
-\  7  5 accessor: rd
-\ 20 12 accessor: I-imm
-\ 12 21 accessor: U-imm
-\  0  7 accessor: opcode
-\ : S-imm ( x -- x ) DUP rd SWAP funct7 5 LSHIFT OR ;
-\ 
-\ : instr. ( x -- )
-\     >R
-\     R@ opcode CASE
-\         OP:LOAD OF
-\             ." LOAD"
-\         ENDOF
-\         OP:STORE OF
-\             R@ funct3 CASE
-\                 %000 OF ." sb" ENDOF
-\                 %001 OF ." sh" ENDOF
-\                 %010 OF ." sw" ENDOF
-\                 ( default ) ." STORE"
-\             ENDCASE
-\             SPACE
-\             R@ rs1 reg. ." , "
-\             R@ rs2 reg. ." , "
-\             R@ S-imm .
-\         ENDOF
-\         OP:BRANCH OF
-\             ." BRANCH"
-\         ENDOF
-\         %1100111 OF ( JALR )
-\             ." JALR"
-\         ENDOF
-\         %1101111 OF ( JAL )
-\             ." JAL"
-\         ENDOF
-\         OP:OP-IMM OF
-\             R@ funct3 CASE
-\                 %000 OF ." addi"  ENDOF
-\                 %001 OF ." slli"  ENDOF
-\                 %010 OF ." slti"  ENDOF
-\                 %011 OF ." sltiu" ENDOF
-\                 %100 OF ." xori"  ENDOF
-\                 %101 OF
-\                     CASE
-\                     ." srli"
-\                     ENDCASE
-\                 ENDOF
-\                 %110 OF ." ori"   ENDOF
-\                 %111 OF ." andi"  ENDOF
-\                 ( default ) ." OP-IMM"
-\             ENDCASE
-\             SPACE
-\             R@ rd  reg. ." , "
-\             R@ rs1 reg. ." , "
-\             R@ I-imm .
-\         ENDOF
-\         OP:OP OF
-\             R@ funct7 7 LSHIFT R@ funct3 OR CASE
-\                 %0000000000 OF ." add" ENDOF
-\                 %0100000000 OF ." sub" ENDOF
-\                 %0000000001 OF ." sll" ENDOF
-\                 %0000000010 OF ." slt" ENDOF
-\                 %0000000011 OF ." sltu" ENDOF
-\                 %0000000100 OF ." xor" ENDOF
-\                 %0000000101 OF ." srl" ENDOF
-\                 %0100000101 OF ." sra" ENDOF
-\                 %0000000110 OF ." or" ENDOF
-\                 %0000000111 OF ." and" ENDOF
-\                 ( default ) ." OP"
-\             ENDCASE
-\             SPACE
-\         ENDOF
-\         %0010111 OF ( AUIPC )
-\             ." AUIPC"
-\         ENDOF
-\         %0110111 OF ( LUI )
-\             ." lui " R@ rd reg. ." , " R@ U-imm .
-\         ENDOF
-\         ( default )
-\             ." UNKNOWN"
-\     ENDCASE
-\     RDROP ;
+S" xxd out.bin" SYSTEM
+S" xxd test.bin" SYSTEM
 
 BYE
