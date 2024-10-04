@@ -17,22 +17,10 @@
     flake-utils.lib.eachSystem hostSystems (
       system: let
         pkgs = import nixpkgs {inherit system crossSystem;};
-        fifth = pkgs.callPackage ({gforth, ...}:
-          pkgs.stdenv.mkDerivation {
-            pname = "fifth";
-            version = "0.1.0";
-            src = ./.;
-            nativeBuildInputs = [gforth];
-            dontPatch = true;
-            dontConfigure = true;
-            makeFlags = ["PREFIX=$(out)"];
-          }) {};
       in {
-        packages.fifth = fifth;
-        packages.default = fifth;
-        devShells.default = pkgs.mkShell {
-          inputsFrom = [fifth];
-        };
+        packages.fifth = pkgs.callPackage ./fifth.nix {};
+        packages.default = self.packages.${system}.fifth;
+        devShells.default = pkgs.callPackage ./shell.nix {};
         formatter = pkgs.buildPackages.alejandra;
       }
     );
